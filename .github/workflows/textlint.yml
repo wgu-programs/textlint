@@ -1,0 +1,59 @@
+name: Run TextLint Rules
+'on':
+  workflow_call:
+    inputs:
+      rules:
+        type: string
+        description: JSON array of textlint rule packages
+        required: true
+        default: '["textlint-rule-no-todo", "textlint-rule-alex"]'
+      text:
+        type: string
+        description: Text string to be linted
+        required: true
+jobs:
+  textLint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install textlint
+        run: npm install --save-dev textlint jq
+      - name: Install textlint rules
+        run: |
+          rules_json=${{ inputs.rules }}
+          rules_array=$(echo $rules_json | jq -r '.[]')
+
+          for rule in $rules_array
+          do
+            npm install --save-dev $rule
+          done
+      - name: Create textlint config file
+        run: |
+          rules_json=${{ inputs.rules }}
+          echo "{ \"rules\": {" > .textlintrc
+          rules_array=$(echo $rules_json | jq -r '.[]' | sed -e 's/^/\"/' -e 's/$/\": true,/' )
+          echo $rules_array | sed 's/,$//' >> .textlintrc
+          echo "} }" >> .textlintrc
+      - name: Create temporary file with input text
+        run: echo "${{ inputs.text }}" > temp.md
+      - name: Run textlint
+        id: textlint
+        run: |
+          npx textlint temp.md || echo "Errors found"
+      - name: Parse textlint output
+        id: parse
+        run: |
+          if npx textlint temp.md --format json > output.json; then
+            echo "result=TRUE" >> $GITHUB_ENV
+          else
+            cat output.json
+            errors=$(cat output.json | jq -c .)
+            echo "::set-output name=result::$errors"
+          fi
+      - name: Output result
+        run: echo "${{ steps.parse.outputs.result }}"
