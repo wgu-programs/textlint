@@ -1,5 +1,6 @@
 name: Run TextLint Rules
-'on':
+
+on:
   workflow_call:
     inputs:
       rules:
@@ -11,6 +12,9 @@ name: Run TextLint Rules
         type: string
         description: Text string to be linted
         required: true
+  repository_dispatch:
+    types: [run-textlint]
+
 jobs:
   textLint:
     runs-on: ubuntu-latest
