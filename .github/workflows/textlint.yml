@@ -19,7 +19,8 @@ jobs:
       - name: Install textlint rules
         run: |
           rules_json='${{ github.event.client_payload.rules }}'
-          rules_array=$(echo $rules_json | jq -r '.[]')
+          echo "$rules_json" > rules.json
+          rules_array=$(jq -r '.[]' rules.json)
 
           for rule in $rules_array
           do
@@ -29,11 +30,11 @@ jobs:
         run: |
           rules_json='${{ github.event.client_payload.rules }}'
           echo "{ \"rules\": {" > .textlintrc
-          rules_array=$(echo $rules_json | jq -r '.[]' | sed -e 's/^/\"/' -e 's/$/\": true,/' )
+          rules_array=$(jq -r '.[]' rules.json | sed -e 's/^/\"/' -e 's/$/\": true,/' )
           echo $rules_array | sed 's/,$//' >> .textlintrc
           echo "} }" >> .textlintrc
       - name: Create temporary file with input text
-        run: echo '${{ github.event.client_payload.text }}' > temp.md
+        run: echo "${{ github.event.client_payload.text }}" > temp.md
       - name: Run textlint
         id: textlint
         run: |
@@ -49,4 +50,4 @@ jobs:
             echo "::set-output name=result::$errors"
           fi
       - name: Output result
-        run: echo '${{ steps.parse.outputs.result }}'
+        run: echo "${{ steps.parse.outputs.result }}"
