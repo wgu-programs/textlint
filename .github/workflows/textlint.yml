@@ -36,23 +36,20 @@ jobs:
           do
             npm install --save-dev $rule
           done
-      - name: Create textlint config file
-        run: |
-          rules_json=${{ inputs.rules }}
-          echo "{ \"rules\": {" > .textlintrc
-          rules_array=$(echo $rules_json | jq -r '.[]' | sed -e 's/^/\"/' -e 's/$/\": true,/' )
-          echo $rules_array | sed 's/,$//' >> .textlintrc
-          echo "} }" >> .textlintrc
       - name: Create temporary file with input text
         run: echo "${{ inputs.text }}" > temp.md
       - name: Run textlint
         id: textlint
         run: |
-          npx textlint temp.md || echo "Errors found"
+          rules_json=${{ inputs.rules }}
+          rules_array=$(echo $rules_json | jq -r '.[]' | sed -e 's/^/--rule /' | tr '\n' ' ')
+          npx textlint $rules_array temp.md || echo "Errors found"
       - name: Parse textlint output
         id: parse
         run: |
-          if npx textlint temp.md --format json > output.json; then
+          rules_json=${{ inputs.rules }}
+          rules_array=$(echo $rules_json | jq -r '.[]' | sed -e 's/^/--rule /' | tr '\n' ' ')
+          if npx textlint $rules_array temp.md --format json > output.json; then
             echo "result=TRUE" >> $GITHUB_ENV
           else
             cat output.json
