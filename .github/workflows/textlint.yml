@@ -14,25 +14,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install textlint
+      - name: Install dependencies
         run: npm install --save-dev textlint jq
       - name: Install textlint rules
         run: |
-          rules_json=${{ toJson(github.event.client_payload.rules) }}
-          echo "$rules_json" > rules.json
-          rules_array=$(jq -r '.[]' rules.json)
-
-          for rule in $rules_array
-          do
-            npm install --save-dev "$rule"
-          done
+          echo '${{ toJson(github.event.client_payload.rules) }}' > rules.json
+          jq -r '.[]' rules.json | xargs -I {} npm install --save-dev {}
       - name: Create .textlintrc file
         run: |
-          rules_json=${{ toJson(github.event.client_payload.rules) }}
-          echo "{ \"rules\": {" > .textlintrc
-          rules_array=$(jq -r '.[]' rules.json | sed -e 's/^/\"/' -e 's/$/\": true,/' )
-          echo $rules_array | sed 's/,$//' >> .textlintrc
-          echo "} }" >> .textlintrc
+          rules=$(jq -r '.[] | "\"" + . + "\": true,"' rules.json | tr '\n' ' ' | sed 's/, $//')
+          echo "{ \"rules\": { $rules } }" > .textlintrc
       - name: Create temporary file with input text
         run: echo "${{ github.event.client_payload.text }}" > temp.md
       - name: Run textlint
@@ -45,7 +36,6 @@ jobs:
           if npx textlint temp.md --format json > output.json; then
             echo "result=TRUE" >> $GITHUB_ENV
           else
-            cat output.json
             errors=$(cat output.json | jq -c .)
             echo "::set-output name=result::$errors"
           fi
