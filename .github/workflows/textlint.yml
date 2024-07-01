@@ -46,6 +46,7 @@ jobs:
         run: |
           curl -X POST "${{ github.event.client_payload.webhook }}" \
           -H 'Content-Type: application/json' \
+          -H 'Authorization: Bearer ${{ github.event.client_payload.api_token }}' \
           -d '{
             "status": "${{ job.status }}",
             "result": "${{ env.result }}"
