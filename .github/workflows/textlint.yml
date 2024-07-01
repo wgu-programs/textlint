@@ -18,17 +18,17 @@ jobs:
         run: npm install --save-dev textlint jq
       - name: Install textlint rules
         run: |
-          rules_json='${{ github.event.client_payload.rules }}'
+          rules_json=${{ toJson(github.event.client_payload.rules) }}
           echo "$rules_json" > rules.json
           rules_array=$(jq -r '.[]' rules.json)
 
           for rule in $rules_array
           do
-            npm install --save-dev $rule
+            npm install --save-dev "$rule"
           done
       - name: Create .textlintrc file
         run: |
-          rules_json='${{ github.event.client_payload.rules }}'
+          rules_json=${{ toJson(github.event.client_payload.rules) }}
           echo "{ \"rules\": {" > .textlintrc
           rules_array=$(jq -r '.[]' rules.json | sed -e 's/^/\"/' -e 's/$/\": true,/' )
           echo $rules_array | sed 's/,$//' >> .textlintrc
